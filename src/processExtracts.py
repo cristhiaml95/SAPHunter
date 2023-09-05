@@ -1,6 +1,5 @@
 import openpyxl
 import datetime
-import pyexcel
 from datetime import datetime as dtime
 from datetime import timedelta
 from calendar import monthrange
@@ -38,6 +37,9 @@ def read_config():
 data=read_config()
 
 def get_sheet(bankName,pathFile):
+    #print(data[bankName])
+    sheetName=data[bankName]['NombreHoja']
+    #print(bankNamefile,sheetName)
     try:
         wb = openpyxl.load_workbook(pathFile)
     except:
@@ -76,7 +78,7 @@ def get_documentNr(bankName,sheet,i,documentColumn,codBancaColumn):
         else:
             nroDocument=sheet.cell(row=i, column=documentColumn).value
     return nroDocument
-def get_description(bankName,sheet,i,descriptionColumn,nombreColum,infoComplColumn):
+def get_description(bankName,sheet,i,descriptionColumn,nombreColum):
     if bankName=="Mercantil":
         if sheet.cell(row=i, column=descriptionColumn).value==None:
             description=''
@@ -86,80 +88,38 @@ def get_description(bankName,sheet,i,descriptionColumn,nombreColum,infoComplColu
             name=''
         else:
             name=sheet.cell(row=i, column=nombreColum).value
-        description=name+"-"+description+"-"+"Originador ACH"
-    elif bankName=="Bisa":
-        if sheet.cell(row=i, column=infoComplColumn).value==None:
-            description=''
-        else:
-            description=str(sheet.cell(row=i, column=infoComplColumn).value).replace("Nombre:","")
+        description=name+"-"+description
     else:   
         if sheet.cell(row=i, column=descriptionColumn).value==None:
             description=''
         else:
             description=sheet.cell(row=i, column=descriptionColumn).value
     return description
-
-def get_float_from_string(number):
-    indexComma=number.find(",")
-    indexPunto=number.find(".")
-    if indexComma>=0 and indexPunto>=0:
-        #print("hay coma y punto")
-        if indexComma>indexPunto:
-            #print("hay coma y punto y la coma esta despues del punto")
-            number=number.replace(".","").replace(",",".")
-            #print(number)
-        else:
-            #print("hay coma y punto y la coma esta antes del punto")
-            number=number.replace(",","")
-    elif indexComma>=0 and indexPunto==-1:
-        #print("solo hay coma")
-        number=number.replace(",",".")
-    elif indexPunto>=0 and indexComma==-1:
-        pass
-        #print("solo hay punto")
-    else:
-        pass
-        #print("no hay coma ni punto")
-    return float(number)
-
-def get_number(number):
-    #print(type(number))
-    if type(number)==float or type(number)==int:
-        finalNumber=float(number)
-    elif type(number==str):
-        finalNumber=get_float_from_string(number)
-    pass
-    return finalNumber
 def get_saldo(sheet,i,descriptionColumn,amountColumn):
     if sheet.cell(row=i, column=amountColumn).value==None:
         saldo=0
     else:
-        saldo=get_number(sheet.cell(row=i, column=amountColumn).value)
+        saldo=float(str(sheet.cell(row=i, column=amountColumn).value).replace(",",""))
     return saldo
 def get_amount(bankName,sheet,i,amountColumn,creditColumn,debitColumn):
     if bankName=="Mercantil" or bankName=="Fassil":
         if sheet.cell(row=i, column=creditColumn).value==None:
             credit=0
         else:
-            credit=get_number(sheet.cell(row=i, column=creditColumn).value)
+            credit=float(str(sheet.cell(row=i, column=creditColumn).value).replace(",",""))
 
         if sheet.cell(row=i, column=debitColumn).value==None:
             debit=0
         else:
-            debit=get_number(sheet.cell(row=i, column=debitColumn).value)
+            debit=float(str(sheet.cell(row=i, column=debitColumn).value).replace(",",""))
         amount=credit-debit
     else:
         if sheet.cell(row=i, column=amountColumn).value==None:
             amount=0
         else:
-            amount=get_number(sheet.cell(row=i, column=amountColumn).value)
+            amount=float(str(sheet.cell(row=i, column=amountColumn).value).replace(",",""))
     return amount
-def get_typetrx(itfcolumn,amount,sheet,i):
-    if sheet.cell(row=i, column=itfcolumn).value==None:
-        description=''
-    else:
-        description=sheet.cell(row=i, column=itfcolumn).value
-    
+def get_typetrx(description,amount):
     if description!='':
         if description.find("ITF")!=-1:
             typetrx="ZITF"
@@ -174,19 +134,9 @@ def get_typetrx(itfcolumn,amount,sheet,i):
         else:
             typetrx="Z002"
     return typetrx
-def maxRowRange(i,sheet,maxRowColumn):
-    k=i
-    while True:
-        if sheet.cell(row=k, column=maxRowColumn).value!=None:
-            pass
-            k=k+1
-        else:
-            break
-            
-    return k-1
-
 def read_bank(fileMeta):
     bankName=fileMeta['bankName']
+    sheetName=data[bankName]['NombreHoja']
     pathFile=fileMeta['path']
     sheet = get_sheet(bankName,pathFile)
     if sheet==None:
@@ -205,9 +155,7 @@ def read_bank(fileMeta):
     saldoColumn=data[bankName]['SaldoCol'] #OPCIONAL PARA SALIDA 3
     nombreColum=data[bankName]['NombreCol']#OPCIONAL PARA SALIDA EN SOLO 1 BANCO 
     descripcionColumn=data[bankName]['DescripcionCol']#OPCIONAL ES PARA SALIDA 4
-    codBancaColumn=data[bankName]['CodBancario']#OPCIONAL
-    infoCompColumn=data[bankName][' Info. Complementaria']#OPCIONAL
-    itfColumn=data[bankName]['CAMPO ITF']#OPCIONAL
+    codBancaColumn=data[bankName]['CodBancario']#OPCIONAL 
     
     dateformat=data[bankName]['FormatoFecha']
     dateExcel=sheet[celdaFecha].value
@@ -217,21 +165,21 @@ def read_bank(fileMeta):
         dateCero = datetime.datetime.strptime(str(dateExcel), dateformat)
     except:
         #write_log("","ERROR EN LA FECHA DEL ARCHIVO",fileMeta['name'])
-        raise Exception(f"ERROR EN EL ARCHIVO")
+        raise Exception(f"ERROR EN LA FECHA DEL ARCHIVO")
     #print("------------",dateCero,"----------------")
     initialDate=datetime.datetime(dateCero.year,dateCero.month,1)
     finalDate=datetime.datetime(dateCero.year,dateCero.month,monthrange(dateCero.year,dateCero.month)[1])
     i=int(celdaFecha[1:])
-    lastRow=maxRowRange(i,sheet,maxRowColumn)
+
     #print(i,sheet.max_row,descripcionColumn)
-    while i<=lastRow:
+    while i<=sheet.max_row:
         if sheet.cell(row=i, column=maxRowColumn).value!=None:
             dateRow=get_dateRow(sheet,i,dateColumn,dateformat)
             nroDocument=get_documentNr(bankName,sheet,i,documentColumn,codBancaColumn)
             saldo=get_saldo(sheet,i,saldoColumn,saldoColumn)
-            description=get_description(bankName,sheet,i,descripcionColumn,nombreColum,infoCompColumn) #DINAMICO 
+            description=get_description(bankName,sheet,i,descripcionColumn,nombreColum) #DINAMICO 
             amount=get_amount(bankName,sheet,i,importColumn,creditColumn,debitColumn) #DINAMICO
-            typetrx=get_typetrx(itfColumn,amount,sheet,i)
+            typetrx=get_typetrx(description,amount)
             unionRow={
                 "date":dateRow,
                 "documentNr":nroDocument,
@@ -284,9 +232,7 @@ def make_templates(infobank):
         rowInit=rowInit+1
     
     binAccount=infobank['account'][-4:]
-    dateFname=datetime.datetime.now().date()
-    daybefore=dateFname-datetime.timedelta(days=1)
-    dateFname=daybefore.strftime("%d%m%Y")
+    dateFname=datetime.datetime.now().date().strftime("%d%m%Y")
     fileTemplateName=f"{binAccount}-{dateFname}.xlsx"
     fileTemplatePath=os.path.join(get_current_path(), "plantillasSap",dateFname,fileTemplateName)
     fileTemplatefolder=os.path.join(get_current_path(), "plantillasSap",dateFname)
@@ -295,32 +241,11 @@ def make_templates(infobank):
     #print(fileTemplatefolder)
     #write_log(" ","OK",fileTemplatefolder)
 
-def convert_xls(pathFolder):    
-    filesInfolder=os.listdir(pathFolder)
-    e=""
-    for file in filesInfolder:
-        if file.endswith(".xls"):
-            try:
-                print(file)
-                xls=pathFolder+"\\"+file
-                xlsx=pathFolder+"\\"+file.replace(".xls",".xlsx")
-                #print(xls)
-                #print(xlsx)
-                pyexcel.save_book_as(file_name=xls, dest_file_name=xlsx)
-            except Exception as e:
-                print(e)
-                os.remove(xlsx)
-                #write_log(f"")
-            #os.remove(xls)
-    return e
 def get_extrac_files():
     # get the current date
     tableAcounts=read_cuentas().values.tolist()
-    currentFolder=datetime.datetime.now().date()
-    dayBefore=currentFolder-datetime.timedelta(days=1)
-    dayBefore=dayBefore.strftime("%d%m%Y")
-    newpath=os.path.join(get_current_path(), "extractosBancarios",dayBefore)
-    e=convert_xls(newpath)
+    datePathValue=datetime.date.today().strftime("%d%m%Y")
+    newpath=os.path.join(get_current_path(), "extractosBancarios",datePathValue)
     files = [f for f in os.listdir(newpath) if f.endswith('.xlsx')]
     #files = os.listdir(newpath)
     paths=[]
@@ -339,8 +264,7 @@ def get_extrac_files():
             "society":society,
             "codeBank":codeBank,
             "currency":currency,
-            "bankName":bankName,
-            "characterNovalid":e,
+            "bankName":bankName
         }
         #print(f[:4])
         paths.append(filemeta)
@@ -349,22 +273,18 @@ def write_log(s,log,rut):
     txtfolder=os.path.dirname(rut)
     pathLog=os.path.join(txtfolder, "logs.txt")
     line=s+str(log)
-    if s=="" and log!="\n":
-        line=line+" "+datetime.datetime.today().strftime("%d/%m/%Y %H:%M:%S")
     print(log)
     with open(pathLog, 'a') as file:
         file.write(line)
 def process_xlsxFiles():
-    currentFolder=datetime.datetime.now().date()
-    dayBefore=currentFolder-datetime.timedelta(days=1)
-    dayBefore=dayBefore.strftime("%d%m%Y")
-    folderExist=createFolder(os.path.join(get_current_path(), "extractosBancarios",dayBefore),force=False,delete=False)
+    currentFolder=datetime.datetime.now().date().strftime("%d%m%Y")
+    folderExist=createFolder(os.path.join(get_current_path(), "extractosBancarios",currentFolder),force=False)
     if not(folderExist):
-        print("EL FOLDER DIARIO NO EXISTE O TIENE FORMATO INCORRECTO",dayBefore)
+        print("EL FOLDER DIARIO NO EXISTE O TIENE FORMATO INCORRECTO")
         return False
-    createFolder(os.path.join(get_current_path(), "plantillasSap",dayBefore),force=True,delete=True)
+    createFolder(os.path.join(get_current_path(), "plantillasSap",currentFolder),force=True)
     pathFiles=get_extrac_files()
-    print(len(pathFiles))
+    #print(pathFiles)
     r=0
     for fileMeta in pathFiles:
         try:
@@ -381,15 +301,9 @@ def process_xlsxFiles():
         except Exception as e:
             write_log(" ",e,fileMeta['path'])
         write_log("","\n",fileMeta['path'])
-    try:
-        ratio="{:.2f}".format(r/len(pathFiles)*100)
-    except:
-        ratio=0
+    ratio="{:.2f}".format(r/len(pathFiles)*100)
     results=f"\n***************  PROCESO TERMINADO AL {ratio}%  ***************"
-    try:
-        write_log("",results,pathFiles[0]['path'])
-    except:
-        pass
+    write_log("",results,pathFiles[0]['path'])
     return True
 if __name__ == "__main__":
     process_xlsxFiles()

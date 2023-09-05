@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import timedelta,datetime
+import datetime
 import sys
 import pandas as pd
 import os
@@ -8,9 +8,9 @@ import openpyxl
 def readTemplateSap(sapInfo):
     wb=openpyxl.load_workbook(sapInfo["path"])
     sh=wb.worksheets[0]
-    initialBalance=float("{:.2f}".format(float(sh["A9"].value)))
-    finalBalance=float("{:.2f}".format(float(sh["B9"].value)))
-    
+    initialBalance=sh["A9"].value
+    finalBalance=sh["B9"].value
+
     bankNamefile=os.path.join(get_current_path(),"config.xlsx")
     sheetName="LoginSap"
     wb = openpyxl.load_workbook(bankNamefile)
@@ -19,8 +19,8 @@ def readTemplateSap(sapInfo):
     
     with open(sapInfo["AuzugTxtPath"], 'r') as file:
         line=file.readlines()[0]
-        initialAuzug = line.split(";")[5].strip()
-        finalAuzug = line.split(";")[8].strip()
+        initialAuzug = line.split(";")[5]
+        finalAuzug = line.split(";")[8]
 
         if initialAuzug.find("-")>0:
             initialAuzug=initialAuzug.replace("-","")
@@ -29,8 +29,7 @@ def readTemplateSap(sapInfo):
         if finalAuzug.find("-")>0:
             finalAuzug=finalAuzug.replace("-","")
             finalAuzug=-float(finalAuzug)
-    initialAuzug=float("{:.2f}".format(float(initialAuzug)))
-    finalAuzug=float("{:.2f}".format(float(finalAuzug)))
+            
     print(initialBalance,finalBalance,initialAuzug,finalAuzug)
     if optionCase=="Doble":
         if initialBalance==initialAuzug and finalBalance==finalAuzug:
@@ -44,7 +43,7 @@ def readTemplateSap(sapInfo):
             return False
     else:
         return True
-def createFolder(path,force,delete):
+def createFolder(path,force):
     try:
         if not os.path.exists(path):
             #print("folder doesn't exist")
@@ -53,13 +52,7 @@ def createFolder(path,force,delete):
                 print("folder created")
             return False
         else:
-            if delete:
-                print("Folder already exists")
-                files=os.listdir(path)
-                for file in files:
-                    if file.endswith(".xlsx"):
-                        pass
-                        #os.remove(path+"\\"+file)
+            print("Folder already exists")
             return True
     except OSError:
         print ('Error: Creating directory. ' +  path)
@@ -95,37 +88,14 @@ def get_account_sap_info(binAccountPath):
         if str(acountRow["NRO.CUENTA"])[-4:]==str(binAccountPath):
             #print("encontrado, terminando....")
             return acountRow
-def isNaN(num):
-    return num!= num
 def get_login_info():
-    global loginInfo
     loginInfo=pd.read_excel(os.path.join(get_current_path(),"config.xlsx"),sheet_name="LoginSap").to_dict("records")
-
     return loginInfo
-def testnulldate():
-    cddte=get_login_info()[5]['VALOR']
-    today=datetime.today().date()
-    yesterday=today-timedelta(days=1)
-    currentDateSap=yesterday.strftime("%d.%m.%Y")
-    if isNaN(cddte):
-        pass
-    else:
-        currentDateSap=datetime.strptime(str(cddte),"%Y-%m-%d %H:%M:%S").strftime("%d.%m.%Y")
-    print(currentDateSap)
 
 def get_templates_path():
-    cddte=get_login_info()[5]['VALOR']
-    today=datetime.today().date()
-    yesterday=today-timedelta(days=1)
-    currentday=today-timedelta(days=1)
-    currentDateSap=yesterday.strftime("%d.%m.%Y")
-    currentDateFolder=currentday.strftime("%d%m%Y")
-    if isNaN(cddte):
-        pass
-    else:
-        currentDateSap=datetime.strptime(str(cddte),"%Y-%m-%d %H:%M:%S").strftime("%d.%m.%Y")
-
-    dir_path = os.path.join(get_current_path(), "plantillasSap",currentDateFolder)
+    currentDate=datetime.datetime.now().date().strftime("%d%m%Y")
+    currentDateSap=datetime.datetime.now().date().strftime("%d.%m.%Y")
+    dir_path = os.path.join(get_current_path(), "plantillasSap",currentDate)
     sapInfo = []
     # Iterate directory
     for path in os.listdir(dir_path):
@@ -149,10 +119,10 @@ def get_templates_path():
                         "CodeBank":sapRow["Banco propio (Campo de SAP)"],
                         "currency":sapRow["MONEDA"],
                         "abrCurrency":sapRow["ABR MONEDA"],
-                        "currentDate":currentDateSap
+                        "currentDate":"01.05.2022"
                     }
                 sapInfo.append(fiels)
 
     return sapInfo
-print(testnulldate())
+print(get_current_path())
 

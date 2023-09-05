@@ -23,7 +23,7 @@ def startSAP():
         print("Error al iniciar el SAPGUI Component")
         proc.kill()
         proc=startSAP()
-        return proc
+        return
     if not type(sapGuiAuto) == win32com.client.CDispatch:
         pass
 
@@ -51,13 +51,7 @@ def startSAP():
     session.findById("wnd[0]").sendVKey(0)
     print("SAP STARTED SUCCESSFULLY...")
     return proc
-
-def make_num(p):
-    l=len(str(p))
-    num="01010000"
-    s=num[:8-l]+str(p)
-    return s
-
+    
 def loadBankTemplates(infoSap):
     # Ingresar datos del banco
     delete_txtFiles(infoSap["folderPath"])
@@ -103,9 +97,7 @@ def loadBankTemplates(infoSap):
         session.endTransaction()
         time.sleep(2)
         raise Exception("ERROR EN VALIDACION DE SALDOS")
-    #session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").doubleClickNode("F00116")
-    session.findById("wnd[0]/tbar[0]/okcd").text = "FF_5"
-    session.findById("wnd[0]").sendVKey(0)
+    session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").doubleClickNode("F00116")
     time.sleep(1)
     session.findById("wnd[0]/usr/chkEINLESEN").selected = "true"
     session.findById("wnd[0]/usr/ctxtAUSZFILE").text =infoSap["AuzugTxtPath"]
@@ -119,18 +111,20 @@ def loadBankTemplates(infoSap):
     session.findById("wnd[0]/usr/radPA_TEST").setFocus
     session.findById("wnd[0]/usr/radPA_TEST").setFocus
     session.findById("wnd[0]/tbar[1]/btn[8]").press()
+    session.findById("wnd[0]/tbar[0]/btn[3]").press()
+    session.findById("wnd[0]/tbar[0]/btn[3]").press()
+    session.findById("wnd[0]/tbar[0]/btn[3]").press()
+    session.findById("wnd[0]/tbar[0]/btn[3]").press()
     try:
-        session.findById("wnd[1]/tbar[0]/btn[0]").press()
+        session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").expandNode("F00113")
     except:
-        pass
-    session.endTransaction()
+        session.endTransaction()
+        time.sleep(2)
+        raise Exception("ERROR DE EXTRACTO DE MEMORIA DE DATOS BANCARIOS")
 
-    # session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").selectedNode = "F00115"
-    # session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").topNode = "Favo"
-    # session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").doubleClickNode("F00115")
-    
-    session.findById("wnd[0]/tbar[0]/okcd").text = "FEBAN"
-    session.findById("wnd[0]").sendVKey(0)
+    session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").selectedNode = "F00115"
+    session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").topNode = "Favo"
+    session.findById("wnd[0]/usr/cntlIMAGE_CONTAINER/shellcont/shell/shellcont[0]/shell").doubleClickNode("F00115")
     time.sleep(1)
 
     session.findById("wnd[1]/usr/ctxtSL_BUKRS-LOW").text = infoSap["societyCode"]
@@ -139,18 +133,11 @@ def loadBankTemplates(infoSap):
     session.findById("wnd[1]/tbar[0]/btn[8]").press()
 
     p=session.findById("wnd[0]/shellcont/shell").getNodeChildrenCount("0101")
-    p=make_num(p)
-    session.findById("wnd[0]/shellcont/shell").expandNode(p)
-    session.findById("wnd[0]/shellcont/shell").selectedNode = (p)
-    session.findById("wnd[0]/shellcont/shell").nodeContextMenu(p)
+    session.findById("wnd[0]/shellcont/shell").expandNode(f"01010{p}")
+    #print(str(p))
+    #time.sleep(2)
+    session.findById("wnd[0]/shellcont/shell").selectedNode = (f"01010{p}0001")
+    session.findById("wnd[0]/shellcont/shell").nodeContextMenu(f"01010{p}0001")
     session.findById("wnd[0]/shellcont/shell").selectContextMenuItem("BS_POST_ITEMS")
-    text=session.findById("wnd[0]/sbar/pane[0]").text
+    session.findById("wnd[0]/tbar[0]/btn[3]").press()
 
-    if text.find("se contabilizó")>-1:
-        session.endTransaction()
-        pass
-    else:
-        session.endTransaction()
-        session.endTransaction()
-        session.endTransaction()
-        raise Exception(text)
